@@ -68,6 +68,7 @@ V11 修正方向：
     innerShadowColor: '#000000',
     outerShadowColor: '#2C0319',
     textureEnabled: true,
+    diamondFollowText: false,
     diamondRight: 5,
     diamondBottom: 4,
   };
@@ -85,7 +86,7 @@ V11 修正方向：
   ];
 
   const THEME_NUMBER_KEYS = ['diamondRight', 'diamondBottom'];
-  const THEME_BOOL_KEYS = ['textureEnabled'];
+  const THEME_BOOL_KEYS = ['textureEnabled', 'diamondFollowText'];
 
   const DEFAULT_FONT = {
     cssUrl: 'https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@500;700&display=swap',
@@ -202,6 +203,7 @@ V11 修正方向：
     });
 
     output.textureEnabled = source.textureEnabled === undefined ? DEFAULT_THEME.textureEnabled : !!source.textureEnabled;
+    output.diamondFollowText = source.diamondFollowText === undefined ? DEFAULT_THEME.diamondFollowText : !!source.diamondFollowText;
     output.diamondRight = normalizeNumber(source.diamondRight, DEFAULT_THEME.diamondRight, -40, 80);
     output.diamondBottom = normalizeNumber(source.diamondBottom, DEFAULT_THEME.diamondBottom, -40, 80);
 
@@ -632,6 +634,8 @@ V11 修正方向：
         root.style.setProperty('--st-heart-hb-inner-shadow-color', clean.innerShadowColor);
         root.style.setProperty('--st-heart-hb-outer-shadow-color', clean.outerShadowColor);
         root.style.setProperty('--st-heart-hb-texture-opacity', clean.textureEnabled ? '1' : '0');
+        root.style.setProperty('--st-heart-hb-diamond-fixed-display', clean.diamondFollowText ? 'none' : 'block');
+        root.style.setProperty('--st-heart-hb-diamond-inline-display', clean.diamondFollowText ? 'inline-block' : 'none');
         root.style.setProperty('--st-heart-hb-diamond-right', `${clean.diamondRight}px`);
         root.style.setProperty('--st-heart-hb-diamond-bottom', `${clean.diamondBottom}px`);
       } catch (e) {}
@@ -783,7 +787,7 @@ V11 修正方向：
         right: var(--st-heart-hb-diamond-right, 5px);
         bottom: var(--st-heart-hb-diamond-bottom, 4px);
         z-index: 3;
-        display: block;
+        display: var(--st-heart-hb-diamond-fixed-display, block);
         font-size: 0.82em;
         line-height: 1;
         color: var(--st-heart-hb-text-color, #F2EAD7);
@@ -807,6 +811,19 @@ V11 修正方向：
         white-space: pre-wrap;
         overflow-wrap: anywhere;
         word-break: break-word;
+      }
+
+      .st-heart-hb-inline-diamond {
+        display: var(--st-heart-hb-diamond-inline-display, none);
+        margin-left: 0.32em;
+        font-size: 0.82em;
+        line-height: 1;
+        color: var(--st-heart-hb-text-color, #F2EAD7);
+        opacity: 0.92;
+        text-shadow: 0 0 7px color-mix(in srgb, var(--st-heart-hb-text-color, #F2EAD7) 34%, transparent);
+        pointer-events: none;
+        vertical-align: baseline;
+        animation: stHeartHbDiamondFloatV11 2.8s ease-in-out infinite;
       }
 
       .st-heart-hb-char {
@@ -1051,6 +1068,7 @@ V11 修正方向：
 
       .st-heart-hb-preview-dialogue-v11::after {
         content: "◇";
+        display: var(--st-heart-hb-preview-diamond-fixed-display, block);
         position: absolute;
         right: var(--st-heart-hb-preview-diamond-right, 5px);
         bottom: var(--st-heart-hb-preview-diamond-bottom, 4px);
@@ -1058,6 +1076,24 @@ V11 修正方向：
         opacity: 0.92;
         line-height: 1;
         pointer-events: none;
+      }
+
+      .st-heart-hb-preview-inline-diamond-v11 {
+        display: var(--st-heart-hb-preview-diamond-inline-display, none);
+        margin-left: 0.32em;
+        color: var(--st-heart-hb-preview-text, #F2EAD7);
+        opacity: 0.92;
+        line-height: 1;
+        vertical-align: baseline;
+      }
+
+      .st-heart-hb-text-row-v11.st-heart-hb-disabled-v11 {
+        opacity: 0.48;
+      }
+
+      .st-heart-hb-input-v11:disabled {
+        cursor: not-allowed;
+        opacity: 0.7;
       }
 
       .st-heart-hb-status-list-v11 {
@@ -1500,9 +1536,19 @@ V11 修正方向：
     const chars = Array.from(text || '');
     let index = 0;
 
+    function appendInlineDiamond() {
+      const diamond = doc.createElement('span');
+      diamond.className = 'st-heart-hb-inline-diamond';
+      diamond.textContent = '◇';
+      container.appendChild(diamond);
+    }
+
     function appendNextChar() {
       if (container.__heartTypingRun !== runId) return;
-      if (index >= chars.length) return;
+      if (index >= chars.length) {
+        appendInlineDiamond();
+        return;
+      }
 
       const char = chars[index];
 
@@ -1847,6 +1893,8 @@ V11 修正方向：
     preview.style.setProperty('--st-heart-hb-preview-inner-shadow', clean.innerShadowColor);
     preview.style.setProperty('--st-heart-hb-preview-outer-shadow', clean.outerShadowColor);
     preview.style.setProperty('--st-heart-hb-preview-texture-opacity', clean.textureEnabled ? '1' : '0');
+    preview.style.setProperty('--st-heart-hb-preview-diamond-fixed-display', clean.diamondFollowText ? 'none' : 'block');
+    preview.style.setProperty('--st-heart-hb-preview-diamond-inline-display', clean.diamondFollowText ? 'inline-block' : 'none');
     preview.style.setProperty('--st-heart-hb-preview-diamond-right', `${clean.diamondRight}px`);
     preview.style.setProperty('--st-heart-hb-preview-diamond-bottom', `${clean.diamondBottom}px`);
     preview.style.setProperty('--st-heart-hb-preview-font-stack', buildFontStack(font));
@@ -1886,6 +1934,7 @@ V11 修正方向：
     if (list) list.innerHTML = renderStatusBlocks(clean.pools);
 
     updatePreview(container, clean.theme, clean.font);
+    updateDiamondPositionControls(container, clean.theme);
   }
 
   async function appendLocalFilesToStatusBlock(block, files) {
@@ -1919,6 +1968,21 @@ V11 修正方向：
 
     container.querySelectorAll(`[data-theme-key="${key}"], [data-theme-text="${key}"]`).forEach((input) => {
       input.value = value;
+    });
+  }
+
+  function updateDiamondPositionControls(container, theme = getTheme()) {
+    if (!container) return;
+
+    const follow = !!sanitizeTheme(theme).diamondFollowText;
+
+    container.querySelectorAll('[data-theme-number="diamondRight"], [data-theme-number="diamondBottom"]').forEach((input) => {
+      input.disabled = follow;
+      const row = input.closest('.st-heart-hb-text-row-v11');
+      if (row) {
+        row.classList.toggle('st-heart-hb-disabled-v11', follow);
+        row.title = follow ? '已开启◇跟随文字，此位置设置暂时失效' : '';
+      }
     });
   }
 
@@ -1985,9 +2049,13 @@ V11 修正方向：
               <span>斜向纹理</span>
               <input type="checkbox" data-theme-bool="textureEnabled" ${originalTheme.textureEnabled ? 'checked' : ''}>
             </label>
+            <label class="st-heart-hb-text-row-v11">
+              <span>◇跟随文字</span>
+              <input type="checkbox" data-theme-bool="diamondFollowText" ${originalTheme.diamondFollowText ? 'checked' : ''}>
+            </label>
             ${numberRow('◇右距', 'diamondRight', originalTheme.diamondRight, '5')}
             ${numberRow('◇底距', 'diamondBottom', originalTheme.diamondBottom, '4')}
-            <div class="st-heart-hb-tip-v11">◇ 的颜色会跟随文字颜色；右距和底距单位为 px。</div>
+            <div class="st-heart-hb-tip-v11">◇ 的颜色会跟随文字颜色；开启“◇跟随文字”后，右距和底距设置会暂时失效。</div>
 
             <label class="st-heart-hb-text-row-v11">
               <span>头像底图</span>
@@ -2000,7 +2068,7 @@ V11 修正方向：
 
             <div class="st-heart-hb-preview-v11">
               <div class="st-heart-hb-preview-avatar-v11"></div>
-              <div class="st-heart-hb-preview-dialogue-v11">颜色与字体预览：保存后，已经显示的心声框也会同步刷新。</div>
+              <div class="st-heart-hb-preview-dialogue-v11">颜色与字体预览：保存后，已经显示的心声框也会同步刷新。<span class="st-heart-hb-preview-inline-diamond-v11">◇</span></div>
             </div>
 
             <div class="st-heart-hb-section-title-v11 st-heart-hb-section-spacer-v11">字体设置</div>
@@ -2059,6 +2127,7 @@ V11 修正方向：
     (doc.body || doc.documentElement).appendChild(dialog);
 
     const container = dialog.querySelector('.st-heart-hb-settings-card-v11');
+    updateDiamondPositionControls(container, originalTheme);
 
     function updateDraft() {
       const current = collectSettings(container);
@@ -2068,6 +2137,7 @@ V11 修正方向：
       applyFont(latestFont);
       setBgEnabled(current.bgEnabled);
       updatePreview(container, latestTheme, latestFont);
+      updateDiamondPositionControls(container, latestTheme);
     }
 
     container.addEventListener('input', (event) => {
