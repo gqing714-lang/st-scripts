@@ -1,4 +1,4 @@
-/* 正式增强版二版修正版：状态连续台词模式 / 平滑逐字头像心声框 / 原生 dialog 设置界面 / 高级质感自定义 / 任意状态头像池 / 本地图片上传 / 角色卡绑定
+/* 正式增强版二版修正版：状态连续台词模式 / 平滑逐字头像心声框 / 原生 dialog 设置界面 / 其他设置自定义 / 任意状态头像池 / 本地图片上传 / 角色卡绑定
 
 AI回复格式：状态连续台词模式
 [HB]
@@ -19,19 +19,19 @@ AI回复格式：状态连续台词模式
 当前功能：
 1. 不使用 ST Popup，不使用 fixed overlay，使用网页原生 <dialog>。
 2. 按钮为「对话框设置」。
-3. 支持状态头像、颜色、字体、头像底图、高级质感、◇位置与◇句尾显示。
+3. 支持状态头像、颜色、字体、头像底图、其他设置、◇位置与◇句尾显示。
 4. 支持图包网址与本地图片上传；本地图片会自动裁切压缩为 1:1。
-5. 支持将图片网址配置、颜色、字体、头像底图开关和高级质感写入当前角色卡；本地上传图片只保存在本机。
+5. 支持将图片网址配置、颜色、字体、头像底图开关和其他设置写入当前角色卡；本地上传图片只保存在本机。
 6. 支持「逐字过程中点击先显示全文」。
 */
 
 (() => {
-  const SCRIPT_FLAG = '__ST_HEART_HB_DIALOG_RELEASE_PRO_PLUS_FIX__';
+  const SCRIPT_FLAG = '__ST_HEART_HB_DIALOG_RELEASE_PRO_PLUS_SHADOW_UI__';
 
   if (window[SCRIPT_FLAG]) return;
   window[SCRIPT_FLAG] = true;
 
-  const VERSION = 'RELEASE_PRO_PLUS_FIX';
+  const VERSION = 'RELEASE_PRO_PLUS_SHADOW_UI';
   const SPEED_MS = 42;
   const KEEP_HB_BOX_COUNT = 5;
 
@@ -51,6 +51,7 @@ AI回复格式：状态连续台词模式
   const DEFAULT_STATUS_POOLS = {};
 
   const DEFAULT_THEME = {
+    // 兼容旧配置：dialogBg 不再显示为可配置颜色，实际对话框底色由 gradientTop / gradientBottom 共同决定。
     dialogBg: '#560B35',
     avatarBg: '#560B35',
     borderColor: '#DDCFA4',
@@ -60,6 +61,13 @@ AI回复格式：状态连续台词模式
     gradientBottom: '#1D0312',
     innerShadowColor: '#000000',
     outerShadowColor: '#2C0319',
+    innerShadowEnabled: true,
+    innerShadowOpacity: 32,
+    innerShadowBlur: 18,
+    outerShadowEnabled: true,
+    outerShadowOpacity: 45,
+    outerShadowBlur: 18,
+    outerShadowY: 8,
     textureEnabled: true,
     diamondRight: 5,
     diamondBottom: 4,
@@ -80,8 +88,24 @@ AI回复格式：状态连续台词模式
     'outerShadowColor',
   ];
 
-  const THEME_NUMBER_KEYS = ['diamondRight', 'diamondBottom', 'diamondSize'];
-  const THEME_BOOL_KEYS = ['textureEnabled', 'diamondFollowText', 'clickToCompleteTyping'];
+  const THEME_NUMBER_KEYS = [
+    'diamondRight',
+    'diamondBottom',
+    'diamondSize',
+    'innerShadowOpacity',
+    'innerShadowBlur',
+    'outerShadowOpacity',
+    'outerShadowBlur',
+    'outerShadowY',
+  ];
+
+  const THEME_BOOL_KEYS = [
+    'textureEnabled',
+    'diamondFollowText',
+    'clickToCompleteTyping',
+    'innerShadowEnabled',
+    'outerShadowEnabled',
+  ];
 
   const DEFAULT_FONT = {
     cssUrl: 'https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@500;700&display=swap',
@@ -200,53 +224,6 @@ AI回复格式：状态连续台词模式
     return safeFallback;
   }
 
-  function parseRgbColor(value) {
-    const raw = String(value || '').trim();
-    let match = raw.match(/^#([0-9a-fA-F]{3})$/);
-
-    if (match) {
-      const [r, g, b] = match[1].split('').map((ch) => parseInt(ch + ch, 16));
-      return [r, g, b];
-    }
-
-    match = raw.match(/^#([0-9a-fA-F]{6})([0-9a-fA-F]{2})?$/);
-
-    if (match) {
-      const hex = match[1];
-      return [
-        parseInt(hex.slice(0, 2), 16),
-        parseInt(hex.slice(2, 4), 16),
-        parseInt(hex.slice(4, 6), 16),
-      ];
-    }
-
-    match = raw.match(/^rgba?\s*\(\s*([0-9.]+)\s*,\s*([0-9.]+)\s*,\s*([0-9.]+)/i);
-
-    if (match) {
-      return [
-        Math.max(0, Math.min(255, Number(match[1]))),
-        Math.max(0, Math.min(255, Number(match[2]))),
-        Math.max(0, Math.min(255, Number(match[3]))),
-      ];
-    }
-
-    return null;
-  }
-
-  function rgbaFromColor(value, alpha, fallback = '#2C0319') {
-    const rgb = parseRgbColor(value) || parseRgbColor(fallback) || [44, 3, 25];
-    const a = Math.max(0, Math.min(1, Number(alpha)));
-    return `rgba(${Math.round(rgb[0])}, ${Math.round(rgb[1])}, ${Math.round(rgb[2])}, ${a})`;
-  }
-
-  function blendColors(base, overlay, overlayRatio = 0.35, fallback = '#560B35') {
-    const a = parseRgbColor(base) || parseRgbColor(fallback) || [86, 11, 53];
-    const b = parseRgbColor(overlay) || a;
-    const ratio = Math.max(0, Math.min(1, Number(overlayRatio)));
-    const mixed = a.map((value, index) => Math.round(value * (1 - ratio) + b[index] * ratio));
-    return `rgb(${mixed[0]}, ${mixed[1]}, ${mixed[2]})`;
-  }
-
   function normalizeNumber(value, fallback, min = -80, max = 80) {
     const number = Number(value);
     const base = Number(fallback);
@@ -266,6 +243,49 @@ AI回复格式：状态连续台词模式
     return Math.round(clamped * 100) / 100;
   }
 
+
+  function normalizePercent(value, fallback = 0) {
+    return normalizeNumber(value, fallback, 0, 100);
+  }
+
+  function normalizePixelRange(value, fallback = 0, min = 0, max = 80) {
+    return normalizeNumber(value, fallback, min, max);
+  }
+
+  function hexToRgb(value, fallback = '#000000') {
+    const hex = normalizeHexColor(value, fallback).replace('#', '');
+    return {
+      r: parseInt(hex.slice(0, 2), 16),
+      g: parseInt(hex.slice(2, 4), 16),
+      b: parseInt(hex.slice(4, 6), 16),
+    };
+  }
+
+  function rgbaFromHex(value, opacityPercent, fallback = '#000000') {
+    const { r, g, b } = hexToRgb(value, fallback);
+    const alpha = Math.max(0, Math.min(1, normalizePercent(opacityPercent, 0) / 100));
+    return `rgba(${r}, ${g}, ${b}, ${alpha.toFixed(2)})`;
+  }
+
+  function buildShadowRules(theme) {
+    const clean = sanitizeTheme(theme);
+    const innerColor = rgbaFromHex(clean.innerShadowColor, clean.innerShadowOpacity, DEFAULT_THEME.innerShadowColor);
+    const outerColor = rgbaFromHex(clean.outerShadowColor, clean.outerShadowOpacity, DEFAULT_THEME.outerShadowColor);
+    const innerBlur = normalizePixelRange(clean.innerShadowBlur, DEFAULT_THEME.innerShadowBlur, 0, 80);
+    const outerBlur = normalizePixelRange(clean.outerShadowBlur, DEFAULT_THEME.outerShadowBlur, 0, 80);
+    const outerY = normalizePixelRange(clean.outerShadowY, DEFAULT_THEME.outerShadowY, 0, 60);
+    const dialogueOuterY = Math.max(1, Math.round(outerY * 0.5));
+    const dialogueOuterBlur = Math.max(1, Math.round(outerBlur * 0.55));
+
+    return {
+      inner: clean.innerShadowEnabled ? `inset 0 0 ${innerBlur}px ${innerColor}` : 'inset 0 0 0 rgba(0, 0, 0, 0)',
+      outerFilter: clean.outerShadowEnabled ? `drop-shadow(0 ${outerY}px ${outerBlur}px ${outerColor})` : 'none',
+      dialogueOuter: clean.outerShadowEnabled ? `0 ${dialogueOuterY}px ${dialogueOuterBlur}px ${outerColor}` : '0 0 0 rgba(0, 0, 0, 0)',
+      previewInner: clean.innerShadowEnabled ? `inset 0 0 ${Math.max(1, Math.round(innerBlur * 0.78))}px ${innerColor}` : 'inset 0 0 0 rgba(0, 0, 0, 0)',
+      previewOuter: clean.outerShadowEnabled ? `0 ${dialogueOuterY}px ${dialogueOuterBlur}px ${outerColor}` : '0 0 0 rgba(0, 0, 0, 0)',
+    };
+  }
+
   function sanitizeTheme(raw) {
     const source = raw && typeof raw === 'object' ? raw : {};
     const output = {};
@@ -274,12 +294,23 @@ AI回复格式：状态连续台词模式
       output[key] = normalizeCssColor(source[key], DEFAULT_THEME[key]);
     });
 
+    // 阴影颜色使用颜色选择器配置，统一规范为 6 位 HEX，后续由脚本自动生成 rgba() 阴影。
+    output.innerShadowColor = normalizeHexColor(source.innerShadowColor, DEFAULT_THEME.innerShadowColor);
+    output.outerShadowColor = normalizeHexColor(source.outerShadowColor, DEFAULT_THEME.outerShadowColor);
+
     output.textureEnabled = source.textureEnabled === undefined ? DEFAULT_THEME.textureEnabled : !!source.textureEnabled;
     output.diamondFollowText = source.diamondFollowText === undefined ? DEFAULT_THEME.diamondFollowText : !!source.diamondFollowText;
     output.clickToCompleteTyping = source.clickToCompleteTyping === undefined ? DEFAULT_THEME.clickToCompleteTyping : !!source.clickToCompleteTyping;
+    output.innerShadowEnabled = source.innerShadowEnabled === undefined ? DEFAULT_THEME.innerShadowEnabled : !!source.innerShadowEnabled;
+    output.outerShadowEnabled = source.outerShadowEnabled === undefined ? DEFAULT_THEME.outerShadowEnabled : !!source.outerShadowEnabled;
     output.diamondRight = normalizeNumber(source.diamondRight, DEFAULT_THEME.diamondRight, -40, 80);
     output.diamondBottom = normalizeNumber(source.diamondBottom, DEFAULT_THEME.diamondBottom, -40, 80);
     output.diamondSize = normalizeFloat(source.diamondSize, DEFAULT_THEME.diamondSize, 0.4, 2);
+    output.innerShadowOpacity = normalizePercent(source.innerShadowOpacity, DEFAULT_THEME.innerShadowOpacity);
+    output.innerShadowBlur = normalizePixelRange(source.innerShadowBlur, DEFAULT_THEME.innerShadowBlur, 0, 80);
+    output.outerShadowOpacity = normalizePercent(source.outerShadowOpacity, DEFAULT_THEME.outerShadowOpacity);
+    output.outerShadowBlur = normalizePixelRange(source.outerShadowBlur, DEFAULT_THEME.outerShadowBlur, 0, 80);
+    output.outerShadowY = normalizePixelRange(source.outerShadowY, DEFAULT_THEME.outerShadowY, 0, 60);
 
     return output;
   }
@@ -693,6 +724,7 @@ AI回复格式：状态连续台词模式
 
   function applyTheme(theme = getTheme()) {
     const clean = sanitizeTheme(theme);
+    const shadows = buildShadowRules(clean);
     const docs = [document, getRootDoc()].filter(Boolean);
 
     docs.forEach((doc) => {
@@ -703,16 +735,13 @@ AI回复格式：状态连续台词模式
         root.style.setProperty('--st-heart-hb-border-color', clean.borderColor);
         root.style.setProperty('--st-heart-hb-text-color', clean.textColor);
         root.style.setProperty('--st-heart-hb-highlight-color', clean.highlightColor);
-        root.style.setProperty('--st-heart-hb-highlight-soft', rgbaFromColor(clean.highlightColor, 0.42, DEFAULT_THEME.highlightColor));
         root.style.setProperty('--st-heart-hb-gradient-top', clean.gradientTop);
         root.style.setProperty('--st-heart-hb-gradient-bottom', clean.gradientBottom);
-        root.style.setProperty('--st-heart-hb-dialog-top-bg', blendColors(clean.dialogBg, clean.gradientTop, 0.42, DEFAULT_THEME.dialogBg));
-        root.style.setProperty('--st-heart-hb-dialog-bottom-bg', blendColors(clean.dialogBg, clean.gradientBottom, 0.58, DEFAULT_THEME.dialogBg));
         root.style.setProperty('--st-heart-hb-inner-shadow-color', clean.innerShadowColor);
-        root.style.setProperty('--st-heart-hb-inner-shadow-soft', rgbaFromColor(clean.innerShadowColor, 0.32, DEFAULT_THEME.innerShadowColor));
         root.style.setProperty('--st-heart-hb-outer-shadow-color', clean.outerShadowColor);
-        root.style.setProperty('--st-heart-hb-outer-shadow-soft', rgbaFromColor(clean.outerShadowColor, 0.38, DEFAULT_THEME.outerShadowColor));
-        root.style.setProperty('--st-heart-hb-outer-shadow-strong', rgbaFromColor(clean.outerShadowColor, 0.52, DEFAULT_THEME.outerShadowColor));
+        root.style.setProperty('--st-heart-hb-inner-shadow-rule', shadows.inner);
+        root.style.setProperty('--st-heart-hb-outer-filter-shadow-rule', shadows.outerFilter);
+        root.style.setProperty('--st-heart-hb-dialogue-outer-shadow-rule', shadows.dialogueOuter);
         root.style.setProperty('--st-heart-hb-texture-opacity', clean.textureEnabled ? '1' : '0');
         root.style.setProperty('--st-heart-hb-diamond-right', `${clean.diamondRight}px`);
         root.style.setProperty('--st-heart-hb-diamond-bottom', `${clean.diamondBottom}px`);
@@ -725,10 +754,12 @@ AI回复格式：状态连续台词模式
   function injectStyleInDoc(doc) {
     if (!doc || !doc.head) return;
 
-    const styleId = 'st-heart-hb-style-release-pro-plus-fix';
+    const styleId = 'st-heart-hb-style-release-pro-plus-shadow-ui';
 
     [
+      'st-heart-hb-style-release-pro-plus-shadow-ui',
       'st-heart-hb-style-release-card',
+      'st-heart-hb-style-release-pro-plus-fix',
       'st-heart-hb-style-release-pro-plus',
       'st-heart-hb-style-v11',
       'st-heart-hb-style-v10',
@@ -770,7 +801,7 @@ AI回复格式：状态连续台词模式
         user-select: none;
         color: var(--st-heart-hb-text-color, #F2EAD7);
         overflow: visible;
-        filter: drop-shadow(0 7px 14px var(--st-heart-hb-outer-shadow-strong, rgba(44, 3, 25, 0.52)));
+        filter: var(--st-heart-hb-outer-filter-shadow-rule, drop-shadow(0 8px 18px rgba(44, 3, 25, 0.45)));
       }
 
       .st-heart-hb-avatar {
@@ -822,13 +853,13 @@ AI回复格式：状态连续台词模式
         background:
           radial-gradient(
             circle at 12% 0%,
-            var(--st-heart-hb-highlight-soft, rgba(244, 160, 200, 0.42)) 0%,
+            color-mix(in srgb, var(--st-heart-hb-highlight-color, #F4A0C8) 42%, transparent) 0%,
             transparent 34%
           ),
           linear-gradient(
             180deg,
-            var(--st-heart-hb-dialog-top-bg, var(--st-heart-hb-gradient-top, #6B123F)),
-            var(--st-heart-hb-dialog-bottom-bg, var(--st-heart-hb-gradient-bottom, #1D0312))
+            var(--st-heart-hb-gradient-top, #6B123F),
+            var(--st-heart-hb-gradient-bottom, #1D0312)
           );
         padding: 9px 28px 16px 12px;
         line-height: 1.65;
@@ -839,9 +870,9 @@ AI回复格式：状态连续台词模式
         overflow: visible;
         position: relative;
         box-shadow:
-          inset 0 0 18px var(--st-heart-hb-inner-shadow-soft, rgba(0, 0, 0, 0.32)),
+          var(--st-heart-hb-inner-shadow-rule, inset 0 0 18px rgba(0, 0, 0, 0.32)),
           inset 0 1px 0 rgba(255,255,255,0.06),
-          0 3px 8px var(--st-heart-hb-outer-shadow-soft, rgba(44, 3, 25, 0.38));
+          var(--st-heart-hb-dialogue-outer-shadow-rule, 0 4px 10px rgba(44, 3, 25, 0.45));
       }
 
       .st-heart-hb-dialogue::before {
@@ -1120,6 +1151,75 @@ AI回复格式：状态连续台词模式
         margin-top: 14px;
       }
 
+      .st-heart-hb-subtitle-v11 {
+        margin: 10px 0 7px;
+        color: #fff1dd;
+        font-size: 0.92em;
+        font-weight: 700;
+      }
+
+      .st-heart-hb-nested-v11 {
+        margin: 0 0 8px 10px;
+        padding-left: 10px;
+        border-left: 1px solid rgba(235, 211, 171, 0.26);
+      }
+
+      .st-heart-hb-shadow-group-v11 {
+        margin: 10px 0;
+        padding: 9px;
+        border: 1px solid rgba(235, 211, 171, 0.22);
+        background: rgba(255,255,255,0.03);
+      }
+
+      .st-heart-hb-shadow-title-v11 {
+        margin-bottom: 7px;
+        color: #fff1dd;
+        font-size: 0.9em;
+        font-weight: 700;
+      }
+
+      .st-heart-hb-range-row-v11 {
+        display: grid;
+        grid-template-columns: 74px minmax(0, 1fr) 42px;
+        align-items: center;
+        gap: 8px;
+        margin-bottom: 8px;
+        font-size: 0.88em;
+      }
+
+      .st-heart-hb-range-row-v11 input[type="range"] {
+        width: 100%;
+        min-width: 0;
+      }
+
+      .st-heart-hb-range-value-v11 {
+        text-align: right;
+        color: rgba(247, 234, 216, 0.78);
+        font-variant-numeric: tabular-nums;
+      }
+
+      .st-heart-hb-color-only-row-v11 {
+        display: grid;
+        grid-template-columns: 74px 46px minmax(0, 1fr);
+        align-items: center;
+        gap: 8px;
+        margin-bottom: 8px;
+        font-size: 0.88em;
+      }
+
+      .st-heart-hb-color-only-row-v11 input[type="color"] {
+        width: 46px;
+        height: 34px;
+        padding: 0;
+        border: 1px solid rgba(235, 211, 171, 0.42);
+        background: transparent;
+      }
+
+      .st-heart-hb-color-only-hint-v11 {
+        color: rgba(247, 234, 216, 0.62);
+        font-size: 0.86em;
+      }
+
       .st-heart-hb-preview-v11 {
         display: flex;
         align-items: flex-start;
@@ -1152,12 +1252,12 @@ AI回复格式：状态连续台词模式
         background: var(--st-heart-hb-preview-dialog, #560B35);
         background:
           radial-gradient(circle at 12% 0%,
-            var(--st-heart-hb-preview-highlight-soft, rgba(244, 160, 200, 0.42)) 0%,
+            color-mix(in srgb, var(--st-heart-hb-preview-highlight, #F4A0C8) 42%, transparent) 0%,
             transparent 34%
           ),
           linear-gradient(180deg,
-            var(--st-heart-hb-preview-dialog-top-bg, var(--st-heart-hb-preview-gradient-top, #6B123F)),
-            var(--st-heart-hb-preview-dialog-bottom-bg, var(--st-heart-hb-preview-gradient-bottom, #1D0312))
+            var(--st-heart-hb-preview-gradient-top, #6B123F),
+            var(--st-heart-hb-preview-gradient-bottom, #1D0312)
           );
         color: var(--st-heart-hb-preview-text, #F2EAD7);
         padding: 8px 26px 14px 10px;
@@ -1165,8 +1265,8 @@ AI回复格式：状态连续台词模式
         font-size: 0.86em;
         position: relative;
         box-shadow:
-          inset 0 0 14px var(--st-heart-hb-preview-inner-shadow-soft, rgba(0, 0, 0, 0.32)),
-          0 3px 8px var(--st-heart-hb-preview-outer-shadow-soft, rgba(44, 3, 25, 0.38));
+          var(--st-heart-hb-preview-inner-shadow-rule, inset 0 0 14px rgba(0, 0, 0, 0.32)),
+          var(--st-heart-hb-preview-outer-shadow-rule, 0 4px 10px rgba(44, 3, 25, 0.45));
       }
 
       .st-heart-hb-preview-dialogue-v11::before {
@@ -1877,6 +1977,33 @@ AI回复格式：状态连续台词模式
     `;
   }
 
+
+  function rangeRow(label, key, value, min = 0, max = 100, step = 1) {
+    const safeKey = escapeHtml(key);
+    const safeValue = escapeHtml(value);
+
+    return `
+      <label class="st-heart-hb-range-row-v11">
+        <span>${escapeHtml(label)}</span>
+        <input type="range" min="${escapeHtml(min)}" max="${escapeHtml(max)}" step="${escapeHtml(step)}" data-theme-number="${safeKey}" value="${safeValue}">
+        <span class="st-heart-hb-range-value-v11" data-range-value="${safeKey}">${safeValue}</span>
+      </label>
+    `;
+  }
+
+  function colorOnlyRow(label, key, value, hint = '') {
+    const safeKey = escapeHtml(key);
+    const pickerValue = escapeHtml(toColorInputValue(value, DEFAULT_THEME[key] || '#000000'));
+
+    return `
+      <label class="st-heart-hb-color-only-row-v11">
+        <span>${escapeHtml(label)}</span>
+        <input type="color" data-theme-color-only="${safeKey}" value="${pickerValue}" title="点选颜色">
+        <span class="st-heart-hb-color-only-hint-v11">${escapeHtml(hint)}</span>
+      </label>
+    `;
+  }
+
   function avatarUrlRowHtml(url = '') {
     return `
       <div class="st-heart-hb-url-row-v11" data-url-row="1">
@@ -1938,6 +2065,10 @@ AI回复格式：状态连续台词模式
       themeDraft[input.dataset.themeText] = input.value;
     });
 
+    container.querySelectorAll('[data-theme-color-only]').forEach((input) => {
+      themeDraft[input.dataset.themeColorOnly] = input.value;
+    });
+
     container.querySelectorAll('[data-theme-number]').forEach((input) => {
       themeDraft[input.dataset.themeNumber] = input.value;
     });
@@ -1975,24 +2106,20 @@ AI回复格式：状态连续台词模式
 
   function updatePreview(container, theme, font = getFontConfig()) {
     const clean = sanitizeTheme(theme);
+    const shadows = buildShadowRules(clean);
     const preview = container.querySelector('.st-heart-hb-preview-v11');
 
     if (!preview) return;
 
-    preview.style.setProperty('--st-heart-hb-preview-dialog', clean.dialogBg);
+    preview.style.setProperty('--st-heart-hb-preview-dialog', clean.gradientTop);
     preview.style.setProperty('--st-heart-hb-preview-avatar', clean.avatarBg);
     preview.style.setProperty('--st-heart-hb-preview-border', clean.borderColor);
     preview.style.setProperty('--st-heart-hb-preview-text', clean.textColor);
     preview.style.setProperty('--st-heart-hb-preview-highlight', clean.highlightColor);
-    preview.style.setProperty('--st-heart-hb-preview-highlight-soft', rgbaFromColor(clean.highlightColor, 0.42, DEFAULT_THEME.highlightColor));
     preview.style.setProperty('--st-heart-hb-preview-gradient-top', clean.gradientTop);
     preview.style.setProperty('--st-heart-hb-preview-gradient-bottom', clean.gradientBottom);
-    preview.style.setProperty('--st-heart-hb-preview-dialog-top-bg', blendColors(clean.dialogBg, clean.gradientTop, 0.42, DEFAULT_THEME.dialogBg));
-    preview.style.setProperty('--st-heart-hb-preview-dialog-bottom-bg', blendColors(clean.dialogBg, clean.gradientBottom, 0.58, DEFAULT_THEME.dialogBg));
-    preview.style.setProperty('--st-heart-hb-preview-inner-shadow', clean.innerShadowColor);
-    preview.style.setProperty('--st-heart-hb-preview-inner-shadow-soft', rgbaFromColor(clean.innerShadowColor, 0.32, DEFAULT_THEME.innerShadowColor));
-    preview.style.setProperty('--st-heart-hb-preview-outer-shadow', clean.outerShadowColor);
-    preview.style.setProperty('--st-heart-hb-preview-outer-shadow-soft', rgbaFromColor(clean.outerShadowColor, 0.38, DEFAULT_THEME.outerShadowColor));
+    preview.style.setProperty('--st-heart-hb-preview-inner-shadow-rule', shadows.previewInner);
+    preview.style.setProperty('--st-heart-hb-preview-outer-shadow-rule', shadows.previewOuter);
     preview.style.setProperty('--st-heart-hb-preview-texture-opacity', clean.textureEnabled ? '1' : '0');
     preview.style.setProperty('--st-heart-hb-preview-diamond-right', `${clean.diamondRight}px`);
     preview.style.setProperty('--st-heart-hb-preview-diamond-bottom', `${clean.diamondBottom}px`);
@@ -2019,8 +2146,10 @@ AI回复格式：状态连续台词模式
       const value = normalizeCssColor(clean.theme[key], DEFAULT_THEME[key]);
       const textInput = container.querySelector(`[data-theme-text="${key}"]`);
       const colorInput = container.querySelector(`[data-theme-key="${key}"]`);
+      const colorOnlyInput = container.querySelector(`[data-theme-color-only="${key}"]`);
       if (textInput) textInput.value = value;
       if (colorInput) colorInput.value = toColorInputValue(value, DEFAULT_THEME[key]);
+      if (colorOnlyInput) colorOnlyInput.value = toColorInputValue(value, DEFAULT_THEME[key]);
     });
 
     THEME_NUMBER_KEYS.forEach((key) => {
@@ -2044,6 +2173,7 @@ AI回复格式：状态连续台词模式
     const list = container.querySelector('[data-status-list]');
     if (list) list.innerHTML = renderStatusBlocks(clean.pools);
 
+    syncRangeLabels(container);
     updatePreview(container, clean.theme, clean.font);
   }
 
@@ -2096,6 +2226,15 @@ AI回复格式：状态连续台词模式
     });
   }
 
+
+  function syncRangeLabels(container) {
+    container?.querySelectorAll?.('[data-theme-number]').forEach((input) => {
+      const key = input.dataset.themeNumber;
+      const output = container.querySelector(`[data-range-value="${key}"]`);
+      if (output) output.textContent = String(input.value ?? '');
+    });
+  }
+
   function closeOldSettingsDialogs() {
     const docs = [document, getRootDoc()].filter(Boolean);
 
@@ -2144,9 +2283,11 @@ AI回复格式：状态连续台词模式
           <section class="st-heart-hb-section-v11">
             <div class="st-heart-hb-section-title-v11">颜色设置</div>
             ${colorRow('头像框底色', 'avatarBg', originalTheme.avatarBg)}
-            ${colorRow('对话框颜色', 'dialogBg', originalTheme.dialogBg)}
-            ${colorRow('上层渐变', 'gradientTop', originalTheme.gradientTop)}
-            ${colorRow('下层渐变', 'gradientBottom', originalTheme.gradientBottom)}
+            <div class="st-heart-hb-subtitle-v11">对话框颜色</div>
+            <div class="st-heart-hb-nested-v11">
+              ${colorRow('上层渐变', 'gradientTop', originalTheme.gradientTop)}
+              ${colorRow('下层渐变', 'gradientBottom', originalTheme.gradientBottom)}
+            </div>
             ${colorRow('边框', 'borderColor', originalTheme.borderColor)}
             ${colorRow('文字', 'textColor', originalTheme.textColor)}
 
@@ -2154,13 +2295,39 @@ AI回复格式：状态连续台词模式
               <summary class="st-heart-hb-advanced-summary-v11">其他设置</summary>
               <div class="st-heart-hb-advanced-body-v11">
                 ${colorRow('左上高光', 'highlightColor', originalTheme.highlightColor)}
-                ${colorRow('内阴影', 'innerShadowColor', originalTheme.innerShadowColor)}
-                ${colorRow('外阴影', 'outerShadowColor', originalTheme.outerShadowColor)}
 
+                <label class="st-heart-hb-text-row-v11">
+                  <span>头像底图</span>
+                  <input type="checkbox" data-bg-enabled="1" ${getBgEnabled() ? 'checked' : ''}>
+                </label>
                 <label class="st-heart-hb-text-row-v11">
                   <span>斜向纹理</span>
                   <input type="checkbox" data-theme-bool="textureEnabled" ${originalTheme.textureEnabled ? 'checked' : ''}>
                 </label>
+
+                <div class="st-heart-hb-shadow-group-v11">
+                  <div class="st-heart-hb-shadow-title-v11">内阴影</div>
+                  <label class="st-heart-hb-text-row-v11">
+                    <span>开启</span>
+                    <input type="checkbox" data-theme-bool="innerShadowEnabled" ${originalTheme.innerShadowEnabled ? 'checked' : ''}>
+                  </label>
+                  ${colorOnlyRow('颜色', 'innerShadowColor', originalTheme.innerShadowColor, '点选即可')}
+                  ${rangeRow('强度', 'innerShadowOpacity', originalTheme.innerShadowOpacity, 0, 100, 1)}
+                  ${rangeRow('范围', 'innerShadowBlur', originalTheme.innerShadowBlur, 0, 80, 1)}
+                </div>
+
+                <div class="st-heart-hb-shadow-group-v11">
+                  <div class="st-heart-hb-shadow-title-v11">外阴影</div>
+                  <label class="st-heart-hb-text-row-v11">
+                    <span>开启</span>
+                    <input type="checkbox" data-theme-bool="outerShadowEnabled" ${originalTheme.outerShadowEnabled ? 'checked' : ''}>
+                  </label>
+                  ${colorOnlyRow('颜色', 'outerShadowColor', originalTheme.outerShadowColor, '点选即可')}
+                  ${rangeRow('强度', 'outerShadowOpacity', originalTheme.outerShadowOpacity, 0, 100, 1)}
+                  ${rangeRow('范围', 'outerShadowBlur', originalTheme.outerShadowBlur, 0, 80, 1)}
+                  ${rangeRow('下移', 'outerShadowY', originalTheme.outerShadowY, 0, 60, 1)}
+                </div>
+
                 <label class="st-heart-hb-text-row-v11">
                   <span>◇句尾显示</span>
                   <input type="checkbox" data-theme-bool="diamondFollowText" ${originalTheme.diamondFollowText ? 'checked' : ''}>
@@ -2172,14 +2339,9 @@ AI回复格式：状态连续台词模式
                 ${numberRow('◇大小', 'diamondSize', originalTheme.diamondSize, '0.82', '0.01')}
                 ${numberRow('◇右距', 'diamondRight', originalTheme.diamondRight, '5')}
                 ${numberRow('◇底距', 'diamondBottom', originalTheme.diamondBottom, '4')}
-                <div class="st-heart-hb-tip-v11">◇ 的颜色会跟随文字颜色；“◇大小”同时影响右下角固定显示和句尾显示。开启“◇句尾显示”后，文字逐字完成后才在句尾出现，右距和底距会失效。开启“逐字点击补全”后，逐字过程中点击会先显示全文，再点击才进入下一句。</div>
+                <div class="st-heart-hb-tip-v11">阴影颜色用色块选择，强度/范围/下移用滑块控制，不需要手写 rgba。◇ 的颜色会跟随文字颜色；开启“◇句尾显示”后，文字逐字完成后才在句尾出现，右距和底距会失效。</div>
               </div>
             </details>
-
-            <label class="st-heart-hb-text-row-v11">
-              <span>头像底图</span>
-              <input type="checkbox" data-bg-enabled="1" ${getBgEnabled() ? 'checked' : ''}>
-            </label>
 
             <div class="st-heart-hb-actions-v11">
               <button type="button" class="st-heart-hb-btn-v11" data-action="reset-colors">恢复默认颜色</button>
@@ -2224,7 +2386,7 @@ AI回复格式：状态连续台词模式
             <div class="st-heart-hb-card-panel-v11">
               <div class="st-heart-hb-section-title-v11">角色卡绑定</div>
               <div class="st-heart-hb-tip-v11">
-                点击“保存到当前角色卡”后，状态图片网址、颜色、字体、头像底图开关和高级质感配置会写入当前角色卡。导出角色卡时会跟着走；其他人仍需要加载本脚本才能渲染。<br><br>
+                点击“保存到当前角色卡”后，状态图片网址、颜色、字体、头像底图开关和其他设置会写入当前角色卡。导出角色卡时会跟着走；其他人仍需要加载本脚本才能渲染。<br><br>
                 本地上传的图片只保存在当前浏览器本地，不会写入角色卡。
               </div>
               <div class="st-heart-hb-actions-v11">
@@ -2254,6 +2416,7 @@ AI回复格式：状态连续台词模式
       applyTheme(latestTheme);
       applyFont(latestFont);
       setBgEnabled(current.bgEnabled);
+      syncRangeLabels(container);
       updatePreview(container, latestTheme, latestFont);
     }
 
@@ -2262,6 +2425,7 @@ AI回复格式：状态连续台词模式
         syncColorPair(container, event.target);
       }
 
+      syncRangeLabels(container);
       updateDraft();
     });
 
@@ -2384,8 +2548,10 @@ AI回复格式：状态连续台词模式
           const value = normalizeCssColor(DEFAULT_THEME[key], DEFAULT_THEME[key]);
           const textInput = container.querySelector(`[data-theme-text="${key}"]`);
           const colorInput = container.querySelector(`[data-theme-key="${key}"]`);
+          const colorOnlyInput = container.querySelector(`[data-theme-color-only="${key}"]`);
           if (textInput) textInput.value = value;
           if (colorInput) colorInput.value = toColorInputValue(value, DEFAULT_THEME[key]);
+          if (colorOnlyInput) colorOnlyInput.value = toColorInputValue(value, DEFAULT_THEME[key]);
         });
 
         THEME_NUMBER_KEYS.forEach((key) => {
@@ -2586,7 +2752,7 @@ AI回复格式：状态连续台词模式
       applyBgModeToAll();
     }, 900);
 
-    console.log('[头像心声框 正式增强版二版] loaded：状态连续台词模式 / 本地图片上传 / 角色卡绑定仅导出网址 / 高级质感自定义 / 任意状态头像池');
+    console.log('[头像心声框 正式增强版二版] loaded：状态连续台词模式 / 本地图片上传 / 角色卡绑定仅导出网址 / 其他设置自定义 / 任意状态头像池');
   }
 
   boot();
