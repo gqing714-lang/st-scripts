@@ -19,7 +19,7 @@ AI回复格式：状态连续台词模式
 当前功能：
 1. 不使用 ST Popup，不使用 fixed overlay，使用网页原生 <dialog>。
 2. 按钮为「对话框设置」。
-3. 支持状态头像、颜色、字体、头像底图、高级质感、◇位置与◇跟随文字。
+3. 支持状态头像、颜色、字体、头像底图、高级质感、◇位置与◇句尾显示。
 4. 支持图包网址与本地图片上传；本地图片会自动裁切压缩为 1:1。
 5. 支持将图片网址配置、颜色、字体、头像底图开关和高级质感写入当前角色卡；本地上传图片只保存在本机。
 6. 支持「逐字过程中点击先显示全文」。
@@ -827,6 +827,17 @@ AI回复格式：状态连续台词模式
         word-break: break-word;
       }
 
+      .st-heart-hb-follow-diamond {
+        display: inline-block;
+        margin-left: 0.18em;
+        color: var(--st-heart-hb-text-color, #F2EAD7);
+        opacity: 0.92;
+        line-height: 1;
+        text-shadow: 0 0 7px color-mix(in srgb, var(--st-heart-hb-text-color, #F2EAD7) 34%, transparent);
+        pointer-events: none;
+        animation: stHeartHbDiamondFloatV11 2.8s ease-in-out infinite;
+      }
+
       .st-heart-hb-char {
         opacity: 0;
         display: inline;
@@ -1559,7 +1570,6 @@ AI回复格式：状态连续台词模式
       }
 
       index++;
-      appendFollowDiamond(container, doc);
       container.__heartTypingTimer = setTimeout(appendNextChar, SPEED_MS);
     }
 
@@ -2040,7 +2050,7 @@ AI回复格式：状态连续台词模式
               <input type="checkbox" data-theme-bool="textureEnabled" ${originalTheme.textureEnabled ? 'checked' : ''}>
             </label>
             <label class="st-heart-hb-text-row-v11">
-              <span>◇跟随文字</span>
+              <span>◇句尾显示</span>
               <input type="checkbox" data-theme-bool="diamondFollowText" ${originalTheme.diamondFollowText ? 'checked' : ''}>
             </label>
             <label class="st-heart-hb-text-row-v11">
@@ -2049,7 +2059,7 @@ AI回复格式：状态连续台词模式
             </label>
             ${numberRow('◇右距', 'diamondRight', originalTheme.diamondRight, '5')}
             ${numberRow('◇底距', 'diamondBottom', originalTheme.diamondBottom, '4')}
-            <div class="st-heart-hb-tip-v11">◇ 的颜色会跟随文字颜色；开启“◇跟随文字”后，右距和底距会失效。开启“逐字点击补全”后，逐字过程中点击会先显示全文，再点击才进入下一句。</div>
+            <div class="st-heart-hb-tip-v11">◇ 的颜色会跟随文字颜色；开启“◇句尾显示”后，文字逐字完成后才在句尾出现，右距和底距会失效。开启“逐字点击补全”后，逐字过程中点击会先显示全文，再点击才进入下一句。</div>
 
             <label class="st-heart-hb-text-row-v11">
               <span>头像底图</span>
