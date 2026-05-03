@@ -63,6 +63,7 @@ AI回复格式：状态连续台词模式
     textureEnabled: true,
     diamondRight: 5,
     diamondBottom: 4,
+    diamondSize: 0.82,
     diamondFollowText: false,
     clickToCompleteTyping: true,
   };
@@ -79,7 +80,7 @@ AI回复格式：状态连续台词模式
     'outerShadowColor',
   ];
 
-  const THEME_NUMBER_KEYS = ['diamondRight', 'diamondBottom'];
+  const THEME_NUMBER_KEYS = ['diamondRight', 'diamondBottom', 'diamondSize'];
   const THEME_BOOL_KEYS = ['textureEnabled', 'diamondFollowText', 'clickToCompleteTyping'];
 
   const DEFAULT_FONT = {
@@ -208,6 +209,16 @@ AI回复格式：状态连续台词模式
     return Math.max(min, Math.min(max, Math.round(number)));
   }
 
+  function normalizeFloat(value, fallback, min = 0.4, max = 2) {
+    const number = Number(value);
+    const base = Number(fallback);
+    const safeBase = Number.isFinite(base) ? base : 1;
+
+    if (!Number.isFinite(number)) return safeBase;
+    const clamped = Math.max(min, Math.min(max, number));
+    return Math.round(clamped * 100) / 100;
+  }
+
   function sanitizeTheme(raw) {
     const source = raw && typeof raw === 'object' ? raw : {};
     const output = {};
@@ -221,6 +232,7 @@ AI回复格式：状态连续台词模式
     output.clickToCompleteTyping = source.clickToCompleteTyping === undefined ? DEFAULT_THEME.clickToCompleteTyping : !!source.clickToCompleteTyping;
     output.diamondRight = normalizeNumber(source.diamondRight, DEFAULT_THEME.diamondRight, -40, 80);
     output.diamondBottom = normalizeNumber(source.diamondBottom, DEFAULT_THEME.diamondBottom, -40, 80);
+    output.diamondSize = normalizeFloat(source.diamondSize, DEFAULT_THEME.diamondSize, 0.4, 2);
 
     return output;
   }
@@ -651,6 +663,7 @@ AI回复格式：状态连续台词模式
         root.style.setProperty('--st-heart-hb-texture-opacity', clean.textureEnabled ? '1' : '0');
         root.style.setProperty('--st-heart-hb-diamond-right', `${clean.diamondRight}px`);
         root.style.setProperty('--st-heart-hb-diamond-bottom', `${clean.diamondBottom}px`);
+        root.style.setProperty('--st-heart-hb-diamond-size', `${clean.diamondSize}em`);
         root.style.setProperty('--st-heart-hb-diamond-fixed-display', clean.diamondFollowText ? 'none' : 'block');
       } catch (e) {}
     });
@@ -802,7 +815,7 @@ AI回复格式：状态连续台词模式
         bottom: var(--st-heart-hb-diamond-bottom, 4px);
         z-index: 3;
         display: var(--st-heart-hb-diamond-fixed-display, block);
-        font-size: 0.82em;
+        font-size: var(--st-heart-hb-diamond-size, 0.82em);
         line-height: 1;
         color: var(--st-heart-hb-text-color, #F2EAD7);
         opacity: 0.92;
@@ -830,6 +843,7 @@ AI回复格式：状态连续台词模式
       .st-heart-hb-follow-diamond {
         display: inline-block;
         margin-left: 0.18em;
+        font-size: var(--st-heart-hb-diamond-size, 0.82em);
         color: var(--st-heart-hb-text-color, #F2EAD7);
         opacity: 0.92;
         line-height: 1;
@@ -967,6 +981,41 @@ AI回复格式：状态连续台词模式
         color: #fff1dd;
       }
 
+      .st-heart-hb-advanced-details-v11 {
+        margin-top: 12px;
+        margin-bottom: 10px;
+        border: 1px solid rgba(235, 211, 171, 0.25);
+        background: rgba(255,255,255,0.025);
+      }
+
+      .st-heart-hb-advanced-summary-v11 {
+        cursor: pointer;
+        list-style: none;
+        padding: 9px 10px;
+        color: #fff1dd;
+        font-weight: 700;
+        user-select: none;
+      }
+
+      .st-heart-hb-advanced-summary-v11::-webkit-details-marker {
+        display: none;
+      }
+
+      .st-heart-hb-advanced-summary-v11::before {
+        content: "▸";
+        display: inline-block;
+        margin-right: 6px;
+        transition: transform 160ms ease;
+      }
+
+      .st-heart-hb-advanced-details-v11[open] .st-heart-hb-advanced-summary-v11::before {
+        transform: rotate(90deg);
+      }
+
+      .st-heart-hb-advanced-body-v11 {
+        padding: 0 10px 10px;
+      }
+
       .st-heart-hb-color-row-v11 {
         display: grid;
         grid-template-columns: 74px 46px minmax(0, 1fr);
@@ -1091,6 +1140,7 @@ AI回复格式：状态连续台词模式
         color: var(--st-heart-hb-preview-text, #F2EAD7);
         opacity: 0.92;
         line-height: 1;
+        font-size: var(--st-heart-hb-preview-diamond-size, 0.82em);
         pointer-events: none;
         display: block;
       }
@@ -1102,6 +1152,7 @@ AI回复格式：状态连续台词模式
       .st-heart-hb-preview-follow-diamond-mark {
         display: inline-block;
         margin-left: 0.18em;
+        font-size: var(--st-heart-hb-preview-diamond-size, 0.82em);
         color: var(--st-heart-hb-preview-text, #F2EAD7);
         opacity: 0.92;
         line-height: 1;
@@ -1761,14 +1812,14 @@ AI回复格式：状态连续台词模式
     `;
   }
 
-  function numberRow(label, key, value, placeholder = '') {
+  function numberRow(label, key, value, placeholder = '', step = '1') {
     const safeKey = escapeHtml(key);
     const safeValue = escapeHtml(value);
 
     return `
       <label class="st-heart-hb-text-row-v11">
         <span>${escapeHtml(label)}</span>
-        <input class="st-heart-hb-input-v11" type="number" step="1" data-theme-number="${safeKey}" value="${safeValue}" placeholder="${escapeHtml(placeholder)}">
+        <input class="st-heart-hb-input-v11" type="number" step="${escapeHtml(step)}" data-theme-number="${safeKey}" value="${safeValue}" placeholder="${escapeHtml(placeholder)}">
       </label>
     `;
   }
@@ -1887,6 +1938,7 @@ AI回复格式：状态连续台词模式
     preview.style.setProperty('--st-heart-hb-preview-texture-opacity', clean.textureEnabled ? '1' : '0');
     preview.style.setProperty('--st-heart-hb-preview-diamond-right', `${clean.diamondRight}px`);
     preview.style.setProperty('--st-heart-hb-preview-diamond-bottom', `${clean.diamondBottom}px`);
+    preview.style.setProperty('--st-heart-hb-preview-diamond-size', `${clean.diamondSize}em`);
     preview.style.setProperty('--st-heart-hb-preview-font-stack', buildFontStack(font));
     preview.style.setProperty('--st-heart-hb-preview-font-weight', sanitizeFont(font).weight);
 
@@ -2038,28 +2090,33 @@ AI回复格式：状态连续台词模式
             ${colorRow('边框', 'borderColor', originalTheme.borderColor)}
             ${colorRow('文字', 'textColor', originalTheme.textColor)}
 
-            <div class="st-heart-hb-section-title-v11 st-heart-hb-section-spacer-v11">高级质感</div>
-            ${colorRow('左上高光', 'highlightColor', originalTheme.highlightColor)}
-            ${colorRow('渐变上层', 'gradientTop', originalTheme.gradientTop)}
-            ${colorRow('渐变下层', 'gradientBottom', originalTheme.gradientBottom)}
-            ${colorRow('内阴影', 'innerShadowColor', originalTheme.innerShadowColor)}
-            ${colorRow('外阴影', 'outerShadowColor', originalTheme.outerShadowColor)}
+            <details class="st-heart-hb-advanced-details-v11">
+              <summary class="st-heart-hb-advanced-summary-v11">高级质感</summary>
+              <div class="st-heart-hb-advanced-body-v11">
+                ${colorRow('左上高光', 'highlightColor', originalTheme.highlightColor)}
+                ${colorRow('渐变上层', 'gradientTop', originalTheme.gradientTop)}
+                ${colorRow('渐变下层', 'gradientBottom', originalTheme.gradientBottom)}
+                ${colorRow('内阴影', 'innerShadowColor', originalTheme.innerShadowColor)}
+                ${colorRow('外阴影', 'outerShadowColor', originalTheme.outerShadowColor)}
 
-            <label class="st-heart-hb-text-row-v11">
-              <span>斜向纹理</span>
-              <input type="checkbox" data-theme-bool="textureEnabled" ${originalTheme.textureEnabled ? 'checked' : ''}>
-            </label>
-            <label class="st-heart-hb-text-row-v11">
-              <span>◇句尾显示</span>
-              <input type="checkbox" data-theme-bool="diamondFollowText" ${originalTheme.diamondFollowText ? 'checked' : ''}>
-            </label>
-            <label class="st-heart-hb-text-row-v11">
-              <span>逐字点击补全</span>
-              <input type="checkbox" data-theme-bool="clickToCompleteTyping" ${originalTheme.clickToCompleteTyping ? 'checked' : ''}>
-            </label>
-            ${numberRow('◇右距', 'diamondRight', originalTheme.diamondRight, '5')}
-            ${numberRow('◇底距', 'diamondBottom', originalTheme.diamondBottom, '4')}
-            <div class="st-heart-hb-tip-v11">◇ 的颜色会跟随文字颜色；开启“◇句尾显示”后，文字逐字完成后才在句尾出现，右距和底距会失效。开启“逐字点击补全”后，逐字过程中点击会先显示全文，再点击才进入下一句。</div>
+                <label class="st-heart-hb-text-row-v11">
+                  <span>斜向纹理</span>
+                  <input type="checkbox" data-theme-bool="textureEnabled" ${originalTheme.textureEnabled ? 'checked' : ''}>
+                </label>
+                <label class="st-heart-hb-text-row-v11">
+                  <span>◇句尾显示</span>
+                  <input type="checkbox" data-theme-bool="diamondFollowText" ${originalTheme.diamondFollowText ? 'checked' : ''}>
+                </label>
+                <label class="st-heart-hb-text-row-v11">
+                  <span>逐字点击补全</span>
+                  <input type="checkbox" data-theme-bool="clickToCompleteTyping" ${originalTheme.clickToCompleteTyping ? 'checked' : ''}>
+                </label>
+                ${numberRow('◇大小', 'diamondSize', originalTheme.diamondSize, '0.82', '0.01')}
+                ${numberRow('◇右距', 'diamondRight', originalTheme.diamondRight, '5')}
+                ${numberRow('◇底距', 'diamondBottom', originalTheme.diamondBottom, '4')}
+                <div class="st-heart-hb-tip-v11">◇ 的颜色会跟随文字颜色；“◇大小”同时影响右下角固定显示和句尾显示。开启“◇句尾显示”后，文字逐字完成后才在句尾出现，右距和底距会失效。开启“逐字点击补全”后，逐字过程中点击会先显示全文，再点击才进入下一句。</div>
+              </div>
+            </details>
 
             <label class="st-heart-hb-text-row-v11">
               <span>头像底图</span>
