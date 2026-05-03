@@ -200,6 +200,53 @@ AI回复格式：状态连续台词模式
     return safeFallback;
   }
 
+  function parseRgbColor(value) {
+    const raw = String(value || '').trim();
+    let match = raw.match(/^#([0-9a-fA-F]{3})$/);
+
+    if (match) {
+      const [r, g, b] = match[1].split('').map((ch) => parseInt(ch + ch, 16));
+      return [r, g, b];
+    }
+
+    match = raw.match(/^#([0-9a-fA-F]{6})([0-9a-fA-F]{2})?$/);
+
+    if (match) {
+      const hex = match[1];
+      return [
+        parseInt(hex.slice(0, 2), 16),
+        parseInt(hex.slice(2, 4), 16),
+        parseInt(hex.slice(4, 6), 16),
+      ];
+    }
+
+    match = raw.match(/^rgba?\s*\(\s*([0-9.]+)\s*,\s*([0-9.]+)\s*,\s*([0-9.]+)/i);
+
+    if (match) {
+      return [
+        Math.max(0, Math.min(255, Number(match[1]))),
+        Math.max(0, Math.min(255, Number(match[2]))),
+        Math.max(0, Math.min(255, Number(match[3]))),
+      ];
+    }
+
+    return null;
+  }
+
+  function rgbaFromColor(value, alpha, fallback = '#2C0319') {
+    const rgb = parseRgbColor(value) || parseRgbColor(fallback) || [44, 3, 25];
+    const a = Math.max(0, Math.min(1, Number(alpha)));
+    return `rgba(${Math.round(rgb[0])}, ${Math.round(rgb[1])}, ${Math.round(rgb[2])}, ${a})`;
+  }
+
+  function blendColors(base, overlay, overlayRatio = 0.35, fallback = '#560B35') {
+    const a = parseRgbColor(base) || parseRgbColor(fallback) || [86, 11, 53];
+    const b = parseRgbColor(overlay) || a;
+    const ratio = Math.max(0, Math.min(1, Number(overlayRatio)));
+    const mixed = a.map((value, index) => Math.round(value * (1 - ratio) + b[index] * ratio));
+    return `rgb(${mixed[0]}, ${mixed[1]}, ${mixed[2]})`;
+  }
+
   function normalizeNumber(value, fallback, min = -80, max = 80) {
     const number = Number(value);
     const base = Number(fallback);
@@ -656,10 +703,16 @@ AI回复格式：状态连续台词模式
         root.style.setProperty('--st-heart-hb-border-color', clean.borderColor);
         root.style.setProperty('--st-heart-hb-text-color', clean.textColor);
         root.style.setProperty('--st-heart-hb-highlight-color', clean.highlightColor);
+        root.style.setProperty('--st-heart-hb-highlight-soft', rgbaFromColor(clean.highlightColor, 0.42, DEFAULT_THEME.highlightColor));
         root.style.setProperty('--st-heart-hb-gradient-top', clean.gradientTop);
         root.style.setProperty('--st-heart-hb-gradient-bottom', clean.gradientBottom);
+        root.style.setProperty('--st-heart-hb-dialog-top-bg', blendColors(clean.dialogBg, clean.gradientTop, 0.42, DEFAULT_THEME.dialogBg));
+        root.style.setProperty('--st-heart-hb-dialog-bottom-bg', blendColors(clean.dialogBg, clean.gradientBottom, 0.58, DEFAULT_THEME.dialogBg));
         root.style.setProperty('--st-heart-hb-inner-shadow-color', clean.innerShadowColor);
+        root.style.setProperty('--st-heart-hb-inner-shadow-soft', rgbaFromColor(clean.innerShadowColor, 0.32, DEFAULT_THEME.innerShadowColor));
         root.style.setProperty('--st-heart-hb-outer-shadow-color', clean.outerShadowColor);
+        root.style.setProperty('--st-heart-hb-outer-shadow-soft', rgbaFromColor(clean.outerShadowColor, 0.38, DEFAULT_THEME.outerShadowColor));
+        root.style.setProperty('--st-heart-hb-outer-shadow-strong', rgbaFromColor(clean.outerShadowColor, 0.52, DEFAULT_THEME.outerShadowColor));
         root.style.setProperty('--st-heart-hb-texture-opacity', clean.textureEnabled ? '1' : '0');
         root.style.setProperty('--st-heart-hb-diamond-right', `${clean.diamondRight}px`);
         root.style.setProperty('--st-heart-hb-diamond-bottom', `${clean.diamondBottom}px`);
@@ -717,7 +770,7 @@ AI回复格式：状态连续台词模式
         user-select: none;
         color: var(--st-heart-hb-text-color, #F2EAD7);
         overflow: visible;
-        filter: drop-shadow(0 7px 14px color-mix(in srgb, var(--st-heart-hb-outer-shadow-color, #2C0319) 52%, transparent));
+        filter: drop-shadow(0 7px 14px var(--st-heart-hb-outer-shadow-strong, rgba(44, 3, 25, 0.52)));
       }
 
       .st-heart-hb-avatar {
@@ -769,13 +822,13 @@ AI回复格式：状态连续台词模式
         background:
           radial-gradient(
             circle at 12% 0%,
-            color-mix(in srgb, var(--st-heart-hb-highlight-color, #F4A0C8) 42%, transparent) 0%,
+            var(--st-heart-hb-highlight-soft, rgba(244, 160, 200, 0.42)) 0%,
             transparent 34%
           ),
           linear-gradient(
             180deg,
-            var(--st-heart-hb-gradient-top, #6B123F),
-            var(--st-heart-hb-gradient-bottom, #1D0312)
+            var(--st-heart-hb-dialog-top-bg, var(--st-heart-hb-gradient-top, #6B123F)),
+            var(--st-heart-hb-dialog-bottom-bg, var(--st-heart-hb-gradient-bottom, #1D0312))
           );
         padding: 9px 28px 16px 12px;
         line-height: 1.65;
@@ -786,9 +839,9 @@ AI回复格式：状态连续台词模式
         overflow: visible;
         position: relative;
         box-shadow:
-          inset 0 0 18px color-mix(in srgb, var(--st-heart-hb-inner-shadow-color, #000000) 32%, transparent),
+          inset 0 0 18px var(--st-heart-hb-inner-shadow-soft, rgba(0, 0, 0, 0.32)),
           inset 0 1px 0 rgba(255,255,255,0.06),
-          0 3px 8px color-mix(in srgb, var(--st-heart-hb-outer-shadow-color, #2C0319) 38%, transparent);
+          0 3px 8px var(--st-heart-hb-outer-shadow-soft, rgba(44, 3, 25, 0.38));
       }
 
       .st-heart-hb-dialogue::before {
@@ -1099,12 +1152,12 @@ AI回复格式：状态连续台词模式
         background: var(--st-heart-hb-preview-dialog, #560B35);
         background:
           radial-gradient(circle at 12% 0%,
-            color-mix(in srgb, var(--st-heart-hb-preview-highlight, #F4A0C8) 42%, transparent) 0%,
+            var(--st-heart-hb-preview-highlight-soft, rgba(244, 160, 200, 0.42)) 0%,
             transparent 34%
           ),
           linear-gradient(180deg,
-            var(--st-heart-hb-preview-gradient-top, #6B123F),
-            var(--st-heart-hb-preview-gradient-bottom, #1D0312)
+            var(--st-heart-hb-preview-dialog-top-bg, var(--st-heart-hb-preview-gradient-top, #6B123F)),
+            var(--st-heart-hb-preview-dialog-bottom-bg, var(--st-heart-hb-preview-gradient-bottom, #1D0312))
           );
         color: var(--st-heart-hb-preview-text, #F2EAD7);
         padding: 8px 26px 14px 10px;
@@ -1112,8 +1165,8 @@ AI回复格式：状态连续台词模式
         font-size: 0.86em;
         position: relative;
         box-shadow:
-          inset 0 0 14px color-mix(in srgb, var(--st-heart-hb-preview-inner-shadow, #000000) 32%, transparent),
-          0 3px 8px color-mix(in srgb, var(--st-heart-hb-preview-outer-shadow, #2C0319) 38%, transparent);
+          inset 0 0 14px var(--st-heart-hb-preview-inner-shadow-soft, rgba(0, 0, 0, 0.32)),
+          0 3px 8px var(--st-heart-hb-preview-outer-shadow-soft, rgba(44, 3, 25, 0.38));
       }
 
       .st-heart-hb-preview-dialogue-v11::before {
@@ -1855,7 +1908,7 @@ AI回复格式：状态连续台词模式
       <div class="st-heart-hb-status-block-v11" data-status-block="1">
         <div class="st-heart-hb-status-head-v11">
           <span class="st-heart-hb-label-v11">状态名</span>
-          <input class="st-heart-hb-input-v11" type="text" data-status-name="1" value="${escapeHtml(status)}" placeholder="普通 / sex / 害羞 / 病娇">
+          <input class="st-heart-hb-input-v11" type="text" data-status-name="1" value="${escapeHtml(status)}" placeholder="名称/心情/差分">
           <button type="button" class="st-heart-hb-btn-v11 danger" data-action="remove-status">删除</button>
         </div>
         <div class="st-heart-hb-url-list-v11" data-url-list="1">
@@ -1931,10 +1984,15 @@ AI回复格式：状态连续台词模式
     preview.style.setProperty('--st-heart-hb-preview-border', clean.borderColor);
     preview.style.setProperty('--st-heart-hb-preview-text', clean.textColor);
     preview.style.setProperty('--st-heart-hb-preview-highlight', clean.highlightColor);
+    preview.style.setProperty('--st-heart-hb-preview-highlight-soft', rgbaFromColor(clean.highlightColor, 0.42, DEFAULT_THEME.highlightColor));
     preview.style.setProperty('--st-heart-hb-preview-gradient-top', clean.gradientTop);
     preview.style.setProperty('--st-heart-hb-preview-gradient-bottom', clean.gradientBottom);
+    preview.style.setProperty('--st-heart-hb-preview-dialog-top-bg', blendColors(clean.dialogBg, clean.gradientTop, 0.42, DEFAULT_THEME.dialogBg));
+    preview.style.setProperty('--st-heart-hb-preview-dialog-bottom-bg', blendColors(clean.dialogBg, clean.gradientBottom, 0.58, DEFAULT_THEME.dialogBg));
     preview.style.setProperty('--st-heart-hb-preview-inner-shadow', clean.innerShadowColor);
+    preview.style.setProperty('--st-heart-hb-preview-inner-shadow-soft', rgbaFromColor(clean.innerShadowColor, 0.32, DEFAULT_THEME.innerShadowColor));
     preview.style.setProperty('--st-heart-hb-preview-outer-shadow', clean.outerShadowColor);
+    preview.style.setProperty('--st-heart-hb-preview-outer-shadow-soft', rgbaFromColor(clean.outerShadowColor, 0.38, DEFAULT_THEME.outerShadowColor));
     preview.style.setProperty('--st-heart-hb-preview-texture-opacity', clean.textureEnabled ? '1' : '0');
     preview.style.setProperty('--st-heart-hb-preview-diamond-right', `${clean.diamondRight}px`);
     preview.style.setProperty('--st-heart-hb-preview-diamond-bottom', `${clean.diamondBottom}px`);
@@ -2085,17 +2143,17 @@ AI回复格式：状态连续台词模式
         <div class="st-heart-hb-settings-grid-v11">
           <section class="st-heart-hb-section-v11">
             <div class="st-heart-hb-section-title-v11">颜色设置</div>
-            ${colorRow('对话框', 'dialogBg', originalTheme.dialogBg)}
-            ${colorRow('头像框', 'avatarBg', originalTheme.avatarBg)}
+            ${colorRow('头像框底色', 'avatarBg', originalTheme.avatarBg)}
+            ${colorRow('对话框颜色', 'dialogBg', originalTheme.dialogBg)}
+            ${colorRow('上层渐变', 'gradientTop', originalTheme.gradientTop)}
+            ${colorRow('下层渐变', 'gradientBottom', originalTheme.gradientBottom)}
             ${colorRow('边框', 'borderColor', originalTheme.borderColor)}
             ${colorRow('文字', 'textColor', originalTheme.textColor)}
 
             <details class="st-heart-hb-advanced-details-v11">
-              <summary class="st-heart-hb-advanced-summary-v11">高级质感</summary>
+              <summary class="st-heart-hb-advanced-summary-v11">其他设置</summary>
               <div class="st-heart-hb-advanced-body-v11">
                 ${colorRow('左上高光', 'highlightColor', originalTheme.highlightColor)}
-                ${colorRow('渐变上层', 'gradientTop', originalTheme.gradientTop)}
-                ${colorRow('渐变下层', 'gradientBottom', originalTheme.gradientBottom)}
                 ${colorRow('内阴影', 'innerShadowColor', originalTheme.innerShadowColor)}
                 ${colorRow('外阴影', 'outerShadowColor', originalTheme.outerShadowColor)}
 
